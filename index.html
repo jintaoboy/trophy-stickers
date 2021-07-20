@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>生成奖杯贴</title>
+    <script src="./js/xlsx.js"></script>
+    <script src="./js/jquery.js"></script>
+    <script src="./js/dom-to-image.js"></script>
+    <script src="./js/jszip.js"></script>
+    <script src="./js/FileSaver.js"></script>
+    <link rel="stylesheet" href="./css/loader.css">
+    <style>
+        label {
+            cursor: pointer;
+        }
+
+        .stickers {
+            width: 728px;
+            height: 544px;
+            /* background: pink; */
+            padding: 0 30px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .stickers .img-box {
+            height: 110px;
+            margin: 20px auto 0;
+            text-align: center;
+        }
+
+        .stickers img {
+            height: 100%;
+            text-align: center;
+        }
+
+        .stickers .alias {
+            font-size: 60px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .stickers .prize {
+            font-size: 120px;
+            font-weight: bold;
+            text-align: center;
+            color: #e60012;
+            letter-spacing: 40px;
+            text-indent: 40px;
+            padding-bottom: 14px;
+        }
+
+        .stickers .row {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 38px;
+            margin-top: 16px;
+            font-weight: bold;
+            font-family: serif;
+        }
+
+        .logo {
+            display: inline-block;
+            width: 140px;
+            border: 2px solid #fff;
+            vertical-align: middle;
+            padding: 10px;
+            width: 140px;
+        }
+
+        .logo img {
+            width: 100%;
+        }
+
+        .btn {
+            background-color: #357fe1;
+            margin-top: 20px;
+            width: 80px;
+            color: #fff;
+            height: 34px;
+            text-align: center;
+            line-height: 34px;
+            cursor: pointer;
+        }
+
+        .num {
+            margin-top: 20px;
+        }
+
+        .letter {
+            letter-spacing: 3px;
+        }
+
+    </style>
+</head>
+
+<body style="width: 1000px;margin: 40px auto;">
+    <!-- 加载中 -->
+    <div class="loader">
+        <span class="loader-1"></span>
+    </div>
+    <div class="download-content" style="overflow:hidden;width:0;height:0;"></div>
+    <div class="stickers model" style="border: 1px solid #ccc;margin-top: 20px;">
+        <div class="img-box">
+            <img src="./img/match_hx.png" alt="">
+        </div>
+        <div class="alias">代用名</div>
+        <div class="prize">铂金奖</div>
+        <div class="row">
+            <span>爵士鼓鼓</span>
+            <span>指导老师:代用名、代用名</span>
+        </div>
+        <div class="row">
+            <sapn>编号:<span class="letter">GZJOOO1</span></sapn>
+            <sapn>二零二一年七月</sapn>
+        </div>
+    </div>
+    <div style="margin-top: 20px;">
+        <span>选择赛事：</span>
+        <label class="logo" onclick="clickImg(this)" style="border-color: red;">
+            <img src="./img/match_hx.png" alt="">
+        </label>
+        <label class="logo" onclick="clickImg(this)">
+            <img src="./img/match_hzh.png" alt="">
+        </label>
+        <label class="logo" onclick="clickImg(this)">
+            <img src="./img/match_liszt.png" alt="">
+        </label>
+        <label class="logo" onclick="clickImg(this)">
+            <img src="./img/match_wd.png" alt="">
+        </label>
+        <label class="logo" onclick="clickImg(this)">
+            <img src="./img/match_xb.png" alt="">
+        </label>
+    </div>
+    <input style="margin-top: 20px;" type="file" id="file" onchange="sendfile(this)"
+        accept="application/vnd.ms-excel" />
+    <div class="num"></div>
+    <div class="btn" onclick="saveImage()">下载</div>
+    <script>
+        var zzexcel;
+        let src = './img/match_hx.png'
+        let type = 0;
+        function sendfile(obj) {
+            $(".loader").show()
+
+            var files = obj.files;
+
+            var fileReader = new FileReader();
+            fileReader.onload = function (ev) {
+                try {
+                    var data = ev.target.result,
+                        workbook = XLSX.read(data, {
+                            type: 'binary'
+                        }), // 以二进制流方式读取得到整份excel表格对象
+                        persons = []; // 存储获取到的数据
+                } catch (e) {
+                    console.log('文件类型不正确');
+                    return;
+                }
+
+                // 表格的表格范围，可用于判断表头是否数量是否正确
+                var fromTo = '';
+                // 遍历每张表读取
+                for (var sheet in workbook.Sheets) {
+                    if (workbook.Sheets.hasOwnProperty(sheet)) {
+                        fromTo = workbook.Sheets[sheet]['!ref'];
+                        persons = persons.concat(XLSX.utils.sheet_to_json(workbook.Sheets[sheet]));
+                        // break; // 如果只取第一张表，就取消注释这行
+                    }
+                }
+                let html = ''
+                getBase64(src, function (res) {
+                    let date = ConverToDate(nowDate())
+                    for (let i = 0; i < persons.length; i++) {
+                        html += `
+                            <div class="stickers" data-name="${persons[i]['奖项'] + '-' + persons[i]['姓名'] + '-' + persons[i]['编号']}">
+                                <div class="img-box">
+                                    <img src="${res}" alt="">
+                                </div>
+                                <div class="alias">${persons[i]['姓名']}</div>
+                                <div class="prize" style="${persons[i]['奖项'].length == 2 ? 'letter-spacing: 70px;text-indent: 70px;' : ''}"> ${persons[i]['奖项']}</div >
+                                <div class="row">
+                                    <div>${persons[i]['专业']}</div>
+                                    <div>指导老师:${persons[i]['指导老师']}</div>
+                                </div >
+                                <div class="row">
+                                    <div>编号:<span class="letter">${persons[i]['编号']}</span></div>
+                                    <div>${date}</div>
+                                </div>
+                            </div>
+                            `
+                    }
+                    $(".download-content").html(html)
+                    $(".num").text(`数量：${persons.length}人`)
+                    $(".loader").hide()
+                    // 证件照图片
+                    // let imgSrc = []
+                    // $(".img-box img").each(function () {
+                    //     imgSrc.push($(this).attr("src"))
+                    // })
+                    // imgLoad(imgSrc, function () {
+                    //     saveImage()
+                    // })
+                })
+            };
+
+            // 以二进制方式打开文件
+            fileReader.readAsBinaryString(files[0]);
+        }
+
+        // 选择图片
+        function clickImg(obj) {
+            $(".logo").each(function () {
+                $(this).css("border-color", "#FFF")
+            })
+            $(obj).css("border-color", "red")
+            src = $(obj).children("img").attr("src")
+            $('.model img').attr("src", src)
+            if (src == './img/match_wd.png') {
+                type = 1
+            }
+        }
+
+        // 图片转base64
+        function getBase64(img, callback) {
+            fetch(img).then(
+                res => res.blob())
+                .then(res => {
+                    let fr = new FileReader();//https://developer.mozilla.org/zh-CN/docs/Web/API/FileReader
+                    fr.onload = function (e) {
+                        callback(e.target.result)
+                    };
+                    fr.onerror = function () {
+                        console.log('读取错误！')
+                    };
+                    fr.readAsDataURL(res);//如果是转文字，第二个参数可以使用编码
+                })
+        }
+
+        // imgSrc参数是页面中要预加载的图片的路径数组，如imgSrc = ['img/xx.png', 'img/xxx.png'...], callback就是你加载完图片之后要执行的函数
+        function imgLoad(imgSrc, callback) {
+            var imgs = [];
+            var c = 0;
+            for (var i = 0; i < imgSrc.length; i++) {
+                imgs[i] = new Image();
+                imgs[i].src = imgSrc[i];
+                imgs[i].onload = function () {
+                    c++
+                    if (c == imgSrc.length) {
+                        if (callback) {
+                            callback();
+                        }
+                    }
+                }
+            }
+            return imgs;　　//返回加载的图片列表，这个省略也没有问题
+        }
+
+        // 保存图片zip
+        function saveImage() {
+            let table = $('.download-content .stickers')
+            if (table.length == 0) {
+                alert("请选择文件！")
+                return
+            }
+            $(".loader").show()
+            let p = []
+            let zip = new JSZip()
+            let fileName = getFileName($("#file").val()) + "-奖杯贴"
+            let pictureName = []
+            // 创建文件夹
+            let img = zip.folder(fileName);
+            $.each(table, (idx, el) => {
+                p.push(domtoimage.toPng(el))
+                pictureName.push($(el).attr("data-name"))
+            })
+
+            allWithProgress(p, function (progress) {
+                $(".progress-box").show()
+            }).then((res) => {
+                $.each(res, (idx, el) => {
+                    img.file(pictureName[idx] + '.png', el.substring(el.indexOf(",") + 1), {
+                        base64: true
+                    })
+                })
+                $(".progress-box").hide()
+                zip.generateAsync({
+                    type: 'blob'
+                }).then(content => {
+                    saveAs(content, fileName + '.zip')
+
+                    $(".loader").hide()
+                })
+            }).catch(err => {
+                console.log(err)
+                $(".progress-box").hide()
+            })
+        }
+
+        // 封装promise.all，并返回进度
+        function allWithProgress(requests, callback) {
+            let index = 0;
+            requests.forEach(item => {
+                item.then(() => {
+                    index++;
+                    const progress = index * 100 / requests.length;
+                    callback(progress);
+                })
+            });
+            return Promise.all(requests);
+        }
+
+        // 日期格式
+        function ConverToDate(date) {
+            if (!date) return date
+            var chinese = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+            let y = date.split('-')[0]
+            let m = date.split('-')[1]
+            var result = "";
+            for (var i = 0; i < y.length; i++) {
+                result += chinese[y.charAt(i)];
+            }
+            result += "年";
+            if (m.charAt(0) == '0') {
+                result += (chinese[m.charAt(1)] + "月");
+            } else if (m.charAt(1) == '0') {
+                result += ("十" + "月");
+            } else {
+                result += ("十" + chinese[m.charAt(1)] + "月");
+            }
+            return result;
+        }
+
+        // 当前日期
+        function nowDate() {
+            let date = new Date()
+            let year = date.getFullYear();
+            let month = date.getMonth() + 1;
+            let day = date.getDate();
+            return `${year}-${month.toString().padStart(2, 0)}-${day}`
+        }
+
+        // 获取文件名
+        function getFileName(o) {
+            var start = o.lastIndexOf("\\");
+            var end = o.lastIndexOf(".")
+            return o.substring(start + 1, end);
+        }
+    </script>
+</body>
+
+</html>
